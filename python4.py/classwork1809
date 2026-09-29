@@ -1,0 +1,9 @@
+# List containing marks, zero, empty strings and blank spaces
+marks = [75, "", 80, "   ", 0, 65, 90]
+
+for mark in marks:
+    # Check for zero, empty string or spaces
+    if mark == 0 or (isinstance(mark, str) and mark.strip() == ""):
+        pass
+    else:
+        print("Mark:", mark)

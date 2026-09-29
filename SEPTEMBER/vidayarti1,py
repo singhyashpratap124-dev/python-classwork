@@ -1,0 +1,211 @@
+"""
+Employee Salary Calculator Utility
+Calculates gross salary, standard allowances, deductions, and net take-home pay.
+"""
+
+from dataclasses import dataclass
+from typing import Optional
+
+
+@dataclass
+class Allowances:
+    """Breakdown of employee allowances and earnings."""
+    hra: float = 0.0          # House Rent Allowance
+    da: float = 0.0           # Dearness Allowance
+    conveyance: float = 0.0   # Travel / Conveyance allowance
+    medical: float = 0.0      # Medical allowance
+    special: float = 0.0      # Special / Performance allowance
+    bonus: float = 0.0        # Performance bonus / incentives
+
+    @property
+    def total(self) -> float:
+        """Total allowances."""
+        return self.hra + self.da + self.conveyance + self.medical + self.special + self.bonus
+
+
+@dataclass
+class Deductions:
+    """Breakdown of statutory and voluntary deductions."""
+    provident_fund: float = 0.0          # PF / 401(k) / Pension contribution
+    tax_deducted_at_source: float = 0.0  # TDS / Income Tax
+    professional_tax: float = 0.0        # Professional tax
+    health_insurance: float = 0.0        # Group health insurance premium
+    other: float = 0.0                   # Other deductions (loans, penalties, etc.)
+
+    @property
+    def total(self) -> float:
+        """Total deductions."""
+        return (
+            self.provident_fund
+            + self.tax_deducted_at_source
+            + self.professional_tax
+            + self.health_insurance
+            + self.other
+        )
+
+
+@dataclass
+class SalarySlip:
+    """Detailed salary slip for an employee."""
+    employee_id: str
+    employee_name: str
+    basic_salary: float
+    allowances: Allowances
+    deductions: Deductions
+
+    @property
+    def gross_salary(self) -> float:
+        """Total earnings before deductions."""
+        return self.basic_salary + self.allowances.total
+
+    @property
+    def total_deductions(self) -> float:
+        """Total deductions."""
+        return self.deductions.total
+
+    @property
+    def net_salary(self) -> float:
+        """Net take-home pay after deductions."""
+        return self.gross_salary - self.total_deductions
+
+    @property
+    def annual_ctc(self) -> float:
+        """Annualized gross Cost to Company (CTC)."""
+        return self.gross_salary * 12
+
+    @property
+    def annual_net(self) -> float:
+        """Annualized net take-home salary."""
+        return self.net_salary * 12
+
+    def generate_payslip(self, currency_symbol: str = "$") -> str:
+        """Generates a formatted text payslip."""
+        divider = "=" * 52
+        sub_divider = "-" * 52
+        lines = [
+            divider,
+            f"{'SALARY PAYSLIP':^52}",
+            divider,
+            f"Employee ID   : {self.employee_id}",
+            f"Employee Name : {self.employee_name}",
+            divider,
+            f"{'EARNINGS':<35} {'AMOUNT':>15}",
+            sub_divider,
+            f"Basic Salary                        : {currency_symbol}{self.basic_salary:>12.2f}",
+            f"House Rent Allowance (HRA)          : {currency_symbol}{self.allowances.hra:>12.2f}",
+            f"Dearness Allowance (DA)             : {currency_symbol}{self.allowances.da:>12.2f}",
+            f"Conveyance Allowance                : {currency_symbol}{self.allowances.conveyance:>12.2f}",
+            f"Medical Allowance                   : {currency_symbol}{self.allowances.medical:>12.2f}",
+            f"Special Allowance                   : {currency_symbol}{self.allowances.special:>12.2f}",
+            f"Bonus / Incentives                  : {currency_symbol}{self.allowances.bonus:>12.2f}",
+            sub_divider,
+            f"GROSS SALARY                        : {currency_symbol}{self.gross_salary:>12.2f}",
+            divider,
+            f"{'DEDUCTIONS':<35} {'AMOUNT':>15}",
+            sub_divider,
+            f"Provident Fund (PF)                 : {currency_symbol}{self.deductions.provident_fund:>12.2f}",
+            f"Income Tax (TDS)                    : {currency_symbol}{self.deductions.tax_deducted_at_source:>12.2f}",
+            f"Professional Tax                    : {currency_symbol}{self.deductions.professional_tax:>12.2f}",
+            f"Health Insurance                    : {currency_symbol}{self.deductions.health_insurance:>12.2f}",
+            f"Other Deductions                    : {currency_symbol}{self.deductions.other:>12.2f}",
+            sub_divider,
+            f"TOTAL DEDUCTIONS                    : {currency_symbol}{self.total_deductions:>12.2f}",
+            divider,
+            f"NET TAKE-HOME PAY                   : {currency_symbol}{self.net_salary:>12.2f}",
+            divider,
+            f"Annual CTC (Gross)                  : {currency_symbol}{self.annual_ctc:>12.2f}",
+            f"Annual Net Take-Home                : {currency_symbol}{self.annual_net:>12.2f}",
+            divider,
+        ]
+        return "\n".join(lines)
+
+
+class SalaryCalculator:
+    """
+    Utility class to configure standard percentage-based salary structures
+    and compute employee pay slips.
+    """
+
+    def __init__(
+        self,
+        hra_percentage: float = 0.40,          # 40% of basic
+        da_percentage: float = 0.10,           # 10% of basic
+        pf_percentage: float = 0.12,           # 12% of basic
+        professional_tax: float = 200.0,       # Fixed monthly tax
+        default_tax_rate: float = 0.10,        # 10% default estimated tax rate on gross
+    ):
+        self.hra_percentage = hra_percentage
+        self.da_percentage = da_percentage
+        self.pf_percentage = pf_percentage
+        self.professional_tax = professional_tax
+        self.default_tax_rate = default_tax_rate
+
+    def calculate_standard_salary(
+        self,
+        employee_id: str,
+        employee_name: str,
+        basic_salary: float,
+        conveyance: float = 1600.0,
+        medical: float = 1250.0,
+        special_allowance: float = 0.0,
+        bonus: float = 0.0,
+        health_insurance: float = 500.0,
+        other_deductions: float = 0.0,
+        tax_rate: Optional[float] = None,
+    ) -> SalarySlip:
+        """
+        Calculates salary breakdown using percentage defaults for allowances & deductions.
+        """
+        tax_pct = tax_rate if tax_rate is not None else self.default_tax_rate
+
+        allowances = Allowances(
+            hra=round(basic_salary * self.hra_percentage, 2),
+            da=round(basic_salary * self.da_percentage, 2),
+            conveyance=conveyance,
+            medical=medical,
+            special=special_allowance,
+            bonus=bonus,
+        )
+
+        gross_salary = basic_salary + allowances.total
+        pf = round(basic_salary * self.pf_percentage, 2)
+        tds = round(gross_salary * tax_pct, 2)
+
+        deductions = Deductions(
+            provident_fund=pf,
+            tax_deducted_at_source=tds,
+            professional_tax=self.professional_tax,
+            health_insurance=health_insurance,
+            other=other_deductions,
+        )
+
+        return SalarySlip(
+            employee_id=employee_id,
+            employee_name=employee_name,
+            basic_salary=basic_salary,
+            allowances=allowances,
+            deductions=deductions,
+        )
+
+
+if __name__ == "__main__":
+    calculator = SalaryCalculator(
+        hra_percentage=0.40,
+        da_percentage=0.10,
+        pf_percentage=0.12,
+        professional_tax=200.0,
+        default_tax_rate=0.12,
+    )
+
+    payslip = calculator.calculate_standard_salary(
+        employee_id="EMP-1001",
+        employee_name="Jane Doe",
+        basic_salary=45000.0,
+        conveyance=1600.0,
+        medical=1160.0,
+        special_allowance=3500.0,
+        bonus=2500.0,
+        health_insurance=750.0,
+    )
+
+    print(payslip.generate_payslip(currency_symbol="$"))
